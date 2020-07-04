@@ -17,6 +17,7 @@ var consumerSecret string = ""
 var accessToken string = ""
 var accessSecret string = ""
 
+
 var max_tweet_length int = 280
 var months = [12]string {
 	"gen",
@@ -36,7 +37,7 @@ var months = [12]string {
 func append_to_last_element(slice []string, line string) []string{
 	n := len(slice)
 	if n == 0 {
-		log.Fatal("Unexpected behaviour: slice argument is empty.")
+		return slice
 	}
 	previous_el := slice[n - 1]
 	previous_el = previous_el[: len(previous_el) - 1]
@@ -50,7 +51,7 @@ func need_to_add(new_el string, today_date string) int{
 		return 1
 	}
 
-	month_check := date[0:3]
+	month_check := new_date[0:3]
 	for i:= 0; i < len(months); i++ {
 		if strings.Compare(month_check, months[i]) == 0 {
 			return 0
@@ -117,19 +118,28 @@ func get_today_events(input_file_name string) []string{
 
 func main(){
 	today_events := get_today_events("./events.txt")
-	//fmt.Println(today_events, len(today_events))
-	query := ""
-	for i:= 0; i < len(today_events); i++ {
-		//fmt.Printf("today_events[%d]: \n%s", i, today_events[i])
-		query = query + today_events[i]
-	}
-	query = query[:280]
-	// Twitter client
+	//Twitter client
 	config := oauth1.NewConfig(consumerKey, consumerSecret)
 	token := oauth1.NewToken(accessToken, accessSecret)
 	httpClient := config.Client(oauth1.NoContext, token)
 	client := twitter.NewClient(httpClient)
-	// Send a Tweet
+
+
+	var query string = ""
+	var post_length int = 0
+
+	for i:= 0; i < len(today_events); i++ {
+		post_length += len(today_events[i])
+		if post_length < max_tweet_length {
+			query = query + today_events[i]
+		} else {
+			client.Statuses.Update(query, nil)
+			time.Sleep(3 * time.Second)
+			post_length = len(today_events[i])
+			query = today_events[i]
+		}
+	}
+	time.Sleep(3 * time.Second)
 	client.Statuses.Update(query, nil)
 
 }
